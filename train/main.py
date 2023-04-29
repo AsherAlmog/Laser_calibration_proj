@@ -1,5 +1,5 @@
 import zipfile
-import csv
+# import csv
 import torch.nn.functional as F
 import cv2 as cv
 import matplotlib.pyplot as plt
@@ -16,74 +16,64 @@ import torchvision.transforms as T
 from torchvision import datasets, transforms
 from torchvision.transforms import ToTensor, Lambda
 import math
-from torchvision.io import read_image
+# from torchvision.io import read_image
+from PIL import Image
+
+# Load the saved numpy arrays
+images = np.load('images.npy')
+labels = np.load('labels.npy')
+
+# Define a custom dataset class
+class SpecklesDataset(Dataset):
+    def __init__(self, images, labels, transform=None):
+        self.images = images
+        self.labels = labels
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        image = self.images[idx]
+        label = self.labels[idx]
+        # Convert numpy array to PIL Image, so we can apply transforms
+        image = Image.fromarray(image)
+        if self.transform:
+            image = self.transform(image)
+        # Convert back to numpy array
+        image = np.array(image)
+
+        return image, label
+
+
+# Define the data transforms
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+])
+
+
+# Create an instance of the custom dataset
+laser_dataset = SpecklesDataset(images, labels, T.Resize((20, 20)))
+
+# Define the data loader
+# batch_size = 32
+# laser_dataloader = DataLoader(laser_dataset, batch_size=batch_size, shuffle=True)
+
+
+# change first size to (1280,960)
+
+# define necessary sizes for the hidden layers
+depths_list = [3, 6, 9]  # initial depth and the depths after each conolution
+kernel_sizes = [5,3]  # kernel sizes for the convolution layers
+pooling_sizes = [2,2]  # max pooling size after each layer
+convolutions_sizes = [(50,50)]  # the size of the image before each convolution layer
+
 
 def calc_size_next_layer(prev_size, kernel_size, pooling_size):
     size = int((prev_size-kernel_size+1)/pooling_size)
     return size
 
-
-
-
-data_transforms = {
-    'train': transforms.Compose([
-        transforms.RandomResizedCrop(224),
-        transforms.RandomHorizontalFlip(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ]),
-    'val': transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ]),
-}
-
-class CustomImageDataset(Dataset):
-    def __init__(self, annotations_file, img_dir, transform=None, target_transform=None):
-        self.img_labels = pd.read_csv(annotations_file)
-        self.img_dir = img_dir
-        self.transform = transform
-        self.target_transform = target_transform
-
-    def __len__(self):
-        return len(self.img_labels)
-
-    def __getitem__(self, idx):
-        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])  # extract the image name from the csv file
-        image = read_image(img_path)
-        #image = image.numpy()
-        #print(f" type {image.dtype}")
-        label = self.img_labels.iloc[idx, 1]   # extract the image label from the csv file
-        # now we turn the label into a 4-dim vector
-        lst = label.split(',')
-        for k in range(len(lst)):
-            lst[k] = int(lst[k])
-            lst[k] = float(lst[k])
-        tensor_label = torch.tensor(lst)
-        if self.transform:
-            image = self.transform(image/255)
-        if self.target_transform:
-            label = self.target_transform(label)
-        return image, tensor_label
-
-laser_dataset = CustomImageDataset(annotations_file="laser_csv.csv", img_dir="Laser_Pics", transform=data_transforms['train'])
-
-
-
-# this function gets a 3-D image as tensor from the dataset and plot it with plt.imshow
-def show_image(x):
-    x_new = x.numpy().transpose((1,2,0))
-    print(f"X shape is {x_new.shape}")
-    plt.imshow(x_new)
-    plt.show()
-
-#change first size to (1280,960)
-
-# define necessary sizes for the hidden layers
-depths_list = [3, 6, 9]  #initial depth and the depths after each conolution
-kernel_sizes = [5,3]  #kernel sizes for the convolution layers
-pooling_sizes = [2,2]  #max pooling size after each layer
-convolutions_sizes = [(224,224)] #the size of the image before each convolution layer
 
 for i in range(len(depths_list)-1):
     size_0 = calc_size_next_layer(convolutions_sizes[i][0],kernel_sizes[i], pooling_sizes[i])
@@ -99,14 +89,16 @@ print(f" expected size is {first_fc_input_size}")
 fc_layers_sizes = [first_fc_input_size, 15, 5, output_size]
 
 
-
-
 # now we divide the dataset into test and training
 training_percentage = 0.8
 train_size = int(training_percentage * len(laser_dataset))
 test_size = len(laser_dataset) - train_size
 train_dataset, test_dataset = torch.utils.data.random_split(laser_dataset, [train_size, test_size])
+
+# plotting an image for example:
 X1, y1 = train_dataset[0]
+plt.imshow(X1, cmap='gray')
+plt.show()
 print(f"training samples amount is {len(train_dataset)}")
 
 
@@ -114,10 +106,6 @@ batch_size = 2
 
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
-
-
-
 
 
 class NeuralNetwork(nn.Module):
@@ -209,6 +197,8 @@ for epoch in range(epochs):
     train(train_dataloader, loss_fn, optimizer)
     test(test_dataloader, loss_fn, optimizer, loss_lst, acc_lst)
 
+
+
 plt.subplot(2, 1, 1)
 plt.plot(loss_lst)
 plt.xlabel('epoch')
@@ -221,52 +211,4 @@ plt.xlabel('epoch')
 plt.ylabel('acc')
 plt.title("acc graph")
 plt.show()
-
-
-
-
-
-
-""""
-
-
-
-
-X1, y1 = face_dataset[0]
-# print(f"y1 is {y1}")
-X2, y2 = face_dataset[150]
-
-show_image(X2)
-
-# now we divide the dataset into test and training
-training_percentage = 0.8
-train_size = int(training_percentage * len(face_dataset))
-test_size = len(face_dataset) - train_size
-train_dataset, test_dataset = torch.utils.data.random_split(face_dataset, [train_size, test_size])
-X1, y1 = train_dataset[0]
-print(f"y1 is {y1} and y1 type is {type(y1)}")
-
-
-batch_size = 2
-train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
-print(train_dataloader)
-
-
-
-
-
-
-
-initial_depth = 3
-secondary_depth = 16
-kernel_size_1 = 5
-kernel_size_2 = 5
-pooling_size = 2
-size_after_1 = int((img_reshape_size-kernel_size_1+1)/pooling_size)
-size_after_2 = int((size_after_1-kernel_size_2+1)/pooling_size)
-first_fc_input_size = int((size_after_2**2)*secondary_depth)
-"""""
-
 

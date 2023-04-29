@@ -68,7 +68,7 @@ for x in range(bottom_bound[0], upper_bound[0]+1):
             print(f"ack_msg is {ack_msg}")
             ack_msg = ""
             # now we should take a pic
-            capture_pic(x,z,theta,0, root_dir)
+            capture_pic(x, z, theta, 0, root_dir)
 
             # now tell the arduino to turn the other way by flipping dir
             curr_dir_z = coordinates_dict['dirz']
@@ -83,7 +83,6 @@ for x in range(bottom_bound[0], upper_bound[0]+1):
             json_str = json_str.encode('utf-8')
             ser.write(json_str)
             print(f"Sent json {coordinates_dict} flipped to arduino")
-
 
             ack_msg = ser.readline().decode().strip()
             while ack_msg != "moved":
