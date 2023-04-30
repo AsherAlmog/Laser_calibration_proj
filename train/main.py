@@ -10,7 +10,7 @@ import torch
 from torch import nn
 import torchvision
 from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 import os
 import torchvision.transforms as T
 from torchvision import datasets, transforms
@@ -20,8 +20,11 @@ import math
 from PIL import Image
 
 # Load the saved numpy arrays
-images = np.load('images.npy')
-labels = np.load('labels.npy')
+images = torch.load('images.pt')
+labels = torch.load('labels.pt')
+# images_tensor = torch.Tensor(images)
+# labels_tensor = torch.Tensor(labels)
+
 
 # Define a custom dataset class
 class SpecklesDataset(Dataset):
@@ -36,13 +39,10 @@ class SpecklesDataset(Dataset):
     def __getitem__(self, idx):
         image = self.images[idx]
         label = self.labels[idx]
-        # Convert numpy array to PIL Image, so we can apply transforms
-        image = Image.fromarray(image)
         if self.transform:
             image = self.transform(image)
-        # Convert back to numpy array
-        image = np.array(image)
-
+        label = torch.Tensor(label)
+        image = image.to(torch.float)
         return image, label
 
 
@@ -52,9 +52,9 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 ])
 
-
+debug_t = transforms.Compose([transforms.Resize((20, 20))])
 # Create an instance of the custom dataset
-laser_dataset = SpecklesDataset(images, labels, T.Resize((20, 20)))
+laser_dataset = SpecklesDataset(images, labels, debug_t)
 
 # Define the data loader
 # batch_size = 32
@@ -67,7 +67,7 @@ laser_dataset = SpecklesDataset(images, labels, T.Resize((20, 20)))
 depths_list = [3, 6, 9]  # initial depth and the depths after each conolution
 kernel_sizes = [5,3]  # kernel sizes for the convolution layers
 pooling_sizes = [2,2]  # max pooling size after each layer
-convolutions_sizes = [(50,50)]  # the size of the image before each convolution layer
+convolutions_sizes = [(20,20)]  # the size of the image before each convolution layer
 
 
 def calc_size_next_layer(prev_size, kernel_size, pooling_size):
@@ -83,7 +83,7 @@ for i in range(len(depths_list)-1):
 
 l = len(convolutions_sizes)
 first_fc_input_size = int((convolutions_sizes[l-1][0]*convolutions_sizes[l-1][1])*depths_list[-1])
-output_size = 4
+output_size = 3
 
 print(f" expected size is {first_fc_input_size}")
 fc_layers_sizes = [first_fc_input_size, 15, 5, output_size]
@@ -96,10 +96,10 @@ test_size = len(laser_dataset) - train_size
 train_dataset, test_dataset = torch.utils.data.random_split(laser_dataset, [train_size, test_size])
 
 # plotting an image for example:
-X1, y1 = train_dataset[0]
-plt.imshow(X1, cmap='gray')
-plt.show()
-print(f"training samples amount is {len(train_dataset)}")
+# X1, y1 = train_dataset[0]
+# plt.imshow(X1, cmap='gray')
+# plt.show()
+# print(f"training samples amount is {len(train_dataset)}")
 
 
 batch_size = 2
@@ -140,62 +140,55 @@ class NeuralNetwork(nn.Module):
 
 learning_rate = 0.001
 model = NeuralNetwork()
-loss_fn = nn.CrossEntropyLoss()  # already applies softmax at the end
+loss_fn = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.95)
 epochs = 50
 loss_lst = []
 acc_lst = []
 
-
 def train(train_dataloader, loss_fn, optimizer):
     size = len(train_dataloader.dataset)
+    num_batches = len(train_dataloader)
+    train_loss = 0
     for batch, (X, y) in enumerate(train_dataloader):
-        y_hat = model(X)
-        # print(f"y_hat's shape:{y_hat.shape} and y's shape: {y.shape}")
-        # print(f"y_hat is:{y_hat} and y is: {y}")
-        # calculate Cross-Entropy loss
-        loss = loss_fn(y_hat, y)
+        # Compute prediction and loss
+        # X = torch.Tensor(X)
+        # y = torch.Tensor(y)
+        pred = model(X)
+        loss = loss_fn(pred, y)
 
-        # backpropagation
+        # Backpropagation
+        optimizer.zero_grad()
         loss.backward()
-
-        # update model weights
         optimizer.step()
 
-        # clean gradients
-        optimizer.zero_grad()
+        train_loss += loss.item()
 
-        if batch % 2 == 0:
-            loss, current = loss.item(), batch * len(X)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-    scheduler.step()
+    # Log training loss
+    train_loss /= num_batches
+    print(f"Training Error: \n Avg loss: {train_loss:>8f} \n")
 
-def test(test_dataloader, loss_fn, optimizer, loss_lst, acc_lst):
+
+def test(test_dataloader, loss_fn, loss_lst):
     size = len(test_dataloader.dataset)
     num_batches = len(test_dataloader)
-    test_loss, correct = 0, 0
+    test_loss = 0
     with torch.no_grad():
         for X, y in test_dataloader:
             y_hat = model(X)
-            loss = loss_fn(y_hat, y).item()
-            test_loss += loss
-            pred = y_hat.argmax(1)
-            actual = y.argmax(1)
-            correct += (pred == actual).type(torch.float).sum().item()  # sum the number of correct predictions
+            loss = loss_fn(y_hat, y)
+            test_loss += loss.item()
 
-    test_loss /= num_batches
-    correct /= size
-    acc = 100 * correct
-    loss_lst.append(test_loss)
-    acc_lst.append(acc)
-    print(f"Test Error: \n Accuracy: {(acc):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+        test_loss /= num_batches
+        loss_lst.append(test_loss)
+        print(f"Test Error: \n Avg loss: {test_loss:>8f} \n")
 
 
 for epoch in range(epochs):
     print(f"Epoch {epoch + 1}\n-------------------------------")
     train(train_dataloader, loss_fn, optimizer)
-    test(test_dataloader, loss_fn, optimizer, loss_lst, acc_lst)
+    test(test_dataloader, loss_fn, loss_lst)
 
 
 
