@@ -145,7 +145,6 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.95)
 epochs = 50
 loss_lst = []
-acc_lst = []
 
 def train(train_dataloader, loss_fn, optimizer):
     size = len(train_dataloader.dataset)
@@ -191,17 +190,10 @@ for epoch in range(epochs):
     test(test_dataloader, loss_fn, loss_lst)
 
 
-
-plt.subplot(2, 1, 1)
+# plt.subplot(2, 1, 1)
+plt.figure()
 plt.plot(loss_lst)
 plt.xlabel('epoch')
 plt.ylabel('loss')
 plt.title("loss graph")
-
-plt.subplot(2, 1, 2)
-plt.plot(acc_lst)
-plt.xlabel('epoch')
-plt.ylabel('acc')
-plt.title("acc graph")
 plt.show()
-
