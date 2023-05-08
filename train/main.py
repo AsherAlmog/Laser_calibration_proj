@@ -159,7 +159,7 @@ for param in model.fc.parameters():
 loss_fn = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.95)
-epochs = 3
+epochs = 50
 loss_lst = []
 
 def train(train_dataloader, loss_fn, optimizer):
