@@ -5,7 +5,7 @@ import torch
 from torchvision.io import read_image
 from torchvision import transforms
 root_dir = 'C:/Users/asher/PycharmProjects/Laser_calibration_proj/speckles_pic'  # directory where the images are saved
-resolution = (50, 50)  # change the resolution to (1280,960)
+resolution = (1280, 960)  # change the resolution to (1280,960)
 # Get a list of image filenames in the directory
 img_filenames = [f for f in os.listdir(root_dir) if f.endswith('.jpg')]
 

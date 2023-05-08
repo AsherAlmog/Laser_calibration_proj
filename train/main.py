@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader, random_split
 import os
 import torchvision.transforms as T
 from torchvision import datasets, transforms
+import torchvision.models as models
 from torchvision.transforms import ToTensor, Lambda
 import math
 # from torchvision.io import read_image
@@ -54,7 +55,7 @@ transform = transforms.Compose([
 
 debug_t = transforms.Compose([transforms.Resize((20, 20))])
 # Create an instance of the custom dataset
-laser_dataset = SpecklesDataset(images, labels, debug_t)
+laser_dataset = SpecklesDataset(images, labels, None)
 
 # Define the data loader
 # batch_size = 32
@@ -139,11 +140,26 @@ class NeuralNetwork(nn.Module):
 
 
 learning_rate = 0.001
-model = NeuralNetwork()
+# model = NeuralNetwork()
+
+# Define the ResNet50 model with weights from ImageNet
+model = models.resnet50(weights='IMAGENET1K_V1')
+num_features = model.fc.in_features
+model.fc = nn.Linear(num_features, output_size)  # Set the output layer to have 3 units
+
+# Freeze the pre-trained layers
+for param in model.parameters():
+    param.requires_grad = False
+
+# Set the output layer to have requires_grad=True
+for param in model.fc.parameters():
+    param.requires_grad = True
+
+
 loss_fn = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.95)
-epochs = 50
+epochs = 3
 loss_lst = []
 
 def train(train_dataloader, loss_fn, optimizer):
@@ -189,7 +205,7 @@ for epoch in range(epochs):
     train(train_dataloader, loss_fn, optimizer)
     test(test_dataloader, loss_fn, loss_lst)
 
-
+torch.save(model.state_dict(), 'model_params.pth')
 # plt.subplot(2, 1, 1)
 plt.figure()
 plt.plot(loss_lst)
