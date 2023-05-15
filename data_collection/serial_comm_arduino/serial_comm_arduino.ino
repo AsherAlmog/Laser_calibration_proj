@@ -29,7 +29,7 @@
 #define NUM_ROTATIONS      20
 
 // Define the speed at which the motors should rotate (in steps per second)
-#define SPEED              3*400*32
+#define SPEED              1*400*32
 
 int32_t speedStep = 2*10^6/STEPS_PER_REV/2; // Speed/sec = second * num microseconds / num steps per revolution / delay twice
 //SoftwareSerial mySerial(2, 3); // RX, TX
@@ -130,7 +130,7 @@ void loop() {
             digitalWrite(X_STEP_PIN, HIGH);
             delayMicroseconds(speedStep);
           }
-          delay(50); // wait 0.1 sec between each spin
+          delay(300); // wait 0.3 sec between each spin
         }
         for (int k=0; k<x; k++){
           for (int i = 0; i<STEPS_PER_REV; i++){
@@ -139,7 +139,7 @@ void loop() {
             digitalWrite(E1_STEP_PIN, HIGH);
             delayMicroseconds(speedStep);
           }
-          delay(50); // wait 0.1 sec between each spin
+          delay(300); // wait 0.3 sec between each spin
         }
         for (int k=0; k<theta; k++){
           for (int i = 0; i<STEPS_PER_REV; i++){
@@ -148,9 +148,9 @@ void loop() {
             digitalWrite(E2_STEP_PIN, HIGH);
             delayMicroseconds(speedStep);
           }
-          delay(50); // wait 0.1 sec between each spin
+          delay(300); // wait 0.3 sec between each spin
         }
-        delay(100); // wait 1 sec after finishing each movement
+        delay(500); // wait 0.5 sec after finishing each movement
         // now tell the RPI that rotating is over
         Serial.println("moved");
       }

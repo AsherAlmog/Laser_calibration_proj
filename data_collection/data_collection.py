@@ -27,6 +27,11 @@ def flip_dir(dir):
     if(dir == 0):
         return 1
 
+def decide_dir(num):
+    if num < 0:
+        return 1
+    else:
+        return 0
 
 baud_rate = 9600
 port = 'COM5'
@@ -53,9 +58,13 @@ root_dir = "C:/Users/asher/PycharmProjects/Laser_calibration_proj/speckles_pic"
 for x in range(bottom_bound[0], upper_bound[0]+1):
     for z in range(bottom_bound[1], upper_bound[1] + 1):
         for theta in range(bottom_bound[2], upper_bound[2] + 1):
-            coordinates_dict['z'] = z
-            coordinates_dict['x'] = x
-            coordinates_dict['theta'] = theta
+            coordinates_dict['z'] = abs(z)
+            coordinates_dict['x'] = abs(x)
+            coordinates_dict['theta'] = abs(theta)
+            coordinates_dict['dirz'] = flip_dir(curr_dir_z)
+            coordinates_dict['dirx'] = flip_dir(curr_dir_x)
+            coordinates_dict['dirtz'] = flip_dir(curr_dir_tz)
+
             json_str = json.dumps(coordinates_dict)+'\n'
             json_str = json_str.encode('utf-8')
             ser.write(json_str)
@@ -91,10 +100,6 @@ for x in range(bottom_bound[0], upper_bound[0]+1):
             ack_msg = ""
 
             # now flip back the direction
-            curr_dir_z = coordinates_dict['dirz']
-            curr_dir_x = coordinates_dict['dirx']
-            curr_dir_tz = coordinates_dict['dirtz']
 
-            coordinates_dict['dirz'] = flip_dir(curr_dir_z)
-            coordinates_dict['dirx'] = flip_dir(curr_dir_x)
-            coordinates_dict['dirtz'] = flip_dir(curr_dir_tz)
+
+

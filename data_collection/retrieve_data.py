@@ -15,9 +15,6 @@ labels = []
 for filename in img_filenames:
     # Load image
     img_path = os.path.join(root_dir, filename)
-    # img = cv2.imread(img_path)
-    # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # img = cv2.resize(img, resolution)
     img = read_image(img_path)
     T = transforms.Resize(resolution)
     img = T(img)
@@ -28,9 +25,6 @@ for filename in img_filenames:
     label = [int(l) for l in label]
     labels.append(label)
 
-# Convert lists to numpy arrays
-# images = np.array(images)
-# labels = np.array(labels)
 
 # Save the arrays
 torch.save(images, '../train/images.pt')
