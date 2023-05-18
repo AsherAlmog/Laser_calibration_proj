@@ -79,7 +79,7 @@ training_percentage = 0.8
 train_size = int(training_percentage * len(laser_dataset))
 test_size = len(laser_dataset) - train_size
 train_dataset, test_dataset = torch.utils.data.random_split(laser_dataset, [train_size, test_size])
-batch_size = 1
+batch_size = 32
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
@@ -117,11 +117,11 @@ for param in model.fc.parameters():
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # Check if GPU is available
 model.to(device)  # Move the model to the device
-
+print(f"working with device: {device}")
 loss_fn = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.95)
-epochs = 2
+epochs = 30
 loss_lst = []
 
 
@@ -174,6 +174,7 @@ plt.plot(loss_lst)
 plt.xlabel('epoch')
 plt.ylabel('loss')
 plt.title("loss graph")
+plt.savefig('loss_graph.png')
 plt.show()
 
 
