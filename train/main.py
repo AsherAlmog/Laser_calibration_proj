@@ -1,18 +1,12 @@
-# import zipfile
-# import csv
-# import torch.nn.functional as F
 # import cv2 as cv
 import matplotlib.pyplot as plt
-# import matplotlib.image as mpimg
-# import numpy as np
-# import pandas as pd
 import torch
 from torch import nn
 # import torchvision
 from torch.utils.data import Dataset
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 import os
-from torchvision import datasets, transforms
+from torchvision import transforms
 import torchvision.models as models
 # from torchvision.io import read_image
 from PIL import Image
