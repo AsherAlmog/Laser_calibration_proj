@@ -13,6 +13,6 @@ The following schematic shows the process:<br>
 # Deep learning model
 original images: (1280, 960,3) images<br>
 data transforms: turning the images to tensors<br>
-The selected model: a pre-trained resNet-50 <br>
+The selected model: a pre-trained resNet-50 , with a modified FC layer<br>
 Loss function : MSE<br>
 optimizer: Adam<br>
