@@ -8,6 +8,8 @@ this script communicates with the arduino. it sends it a position to move to dec
 and waits for an ack message. Then it captures a picture using the picamera and saves it in a directory
 that is *hard coded* in the code. The next step is telling the arduino to nove back to the initial position.
 there is a range of positions to iterate through that are also hard coded and should be changed manually if necessary.<br>
+The following schematic shows the process:<br>
+![communication Image](communication_scheme.png)
 # Deep learning model
 original images: (1280, 960,3) images<br>
 data transforms: resizing to (224,224) images and normalizing to mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)<br>
