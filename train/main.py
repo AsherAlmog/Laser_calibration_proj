@@ -12,7 +12,7 @@ import torchvision.models as models
 from PIL import Image
 import glob
 
-
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # Check if GPU is available
 class SpeckleDataset(Dataset):
     def __init__(self, data_dir, transform=None):
         self.data_dir = data_dir
@@ -53,12 +53,13 @@ class SpeckleDataset(Dataset):
         return label
 
 
-data_dir = 'E:/speckles_pic'
+data_dir = '/home/baralmog/speckles_pic'
 
 # Define the data transforms
 transform = transforms.Compose([
+    transforms.Resize((224,224)),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
 debug_t = transforms.Compose([
@@ -92,12 +93,13 @@ if plot_first_img_flag:
     plt.show()
 
 
-learning_rate = 0.001
+learning_rate = 0.01
 # model = NeuralNetwork()
 
 # Define the ResNet50 model with weights from ImageNet
 output_size = 3
-model = models.resnet50(weights='IMAGENET1K_V1')
+# model = models.resnet50(weights='IMAGENET1K_V1')
+model = models.resnet50(pretrained=True)
 num_features = model.fc.in_features
 model.fc = nn.Linear(num_features, output_size)  # Set the output layer to have 3 units
 
@@ -109,24 +111,27 @@ for param in model.parameters():
 for param in model.fc.parameters():
     param.requires_grad = True
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # Check if GPU is available
-model.to(device)  # Move the model to the device
+
+#model.to(device)  # Move the model to the device
+device_ids = [0,1,2,3]
+model = model.cuda()
+model = nn.DataParallel(model)
 print(f"working with device: {device}")
-loss_fn = nn.MSELoss()
+loss_fn = nn.MSELoss()# .to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.95)
-epochs = 30
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.4)
+epochs = 60
 loss_lst = []
 
 
-def train(train_dataloader, loss_fn, optimizer):
+def train(train_dataloader, loss_fn, optimizer, device):
     size = len(train_dataloader.dataset)
     num_batches = len(train_dataloader)
     train_loss = 0
     for batch, (X, y) in enumerate(train_dataloader):
         # Compute prediction and loss
-        # X = torch.Tensor(X)
-        # y = torch.Tensor(y)
+        X = X.cuda(non_blocking=True)
+        y = y.cuda(non_blocking=True)
         pred = model(X)
         loss = loss_fn(pred, y)
 
@@ -142,12 +147,14 @@ def train(train_dataloader, loss_fn, optimizer):
     print(f"Training Error: \n Avg loss: {train_loss:>8f} \n")
 
 
-def test(test_dataloader, loss_fn, loss_lst):
+def test(test_dataloader, loss_fn, loss_lst, device):
     size = len(test_dataloader.dataset)
     num_batches = len(test_dataloader)
     test_loss = 0
     with torch.no_grad():
         for X, y in test_dataloader:
+            X = X.cuda(non_blocking=True)
+            y = y.cuda(non_blocking=True)
             y_hat = model(X)
             loss = loss_fn(y_hat, y)
             test_loss += loss.item()
@@ -159,8 +166,8 @@ def test(test_dataloader, loss_fn, loss_lst):
 
 for epoch in range(epochs):
     print(f"Epoch {epoch + 1}\n-------------------------------")
-    train(train_dataloader, loss_fn, optimizer)
-    test(test_dataloader, loss_fn, loss_lst)
+    train(train_dataloader, loss_fn, optimizer, device)
+    test(test_dataloader, loss_fn, loss_lst, device)
 
 torch.save(model.state_dict(), 'model_params.pth')
 plt.figure()
