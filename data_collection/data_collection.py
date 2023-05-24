@@ -33,6 +33,7 @@ def decide_dir(num):
     else:
         return 0
 
+
 baud_rate = 9600
 port = 'COM5'
 ser = serial.Serial(port, baud_rate)  # , timeout=10)
@@ -49,57 +50,66 @@ while ack_msg != "ready":
 print(f"ack_msg is {ack_msg}")
 ack_msg = ""
 # the vectors are organized in this order: [x,z,theta_z]
-bottom_bound = [8,6,1]
-upper_bound = [9,7,2]
+bottom_bound = [8, 6, 1]
+upper_bound = [9, 7, 2]
 range_arr = [1, 1, 1]
 
 root_dir = "C:/Users/asher/PycharmProjects/Laser_calibration_proj/speckles_pic"
+start_iter = 0
+num_iterations = 15
+first_run_flag = 1
+for z in range(bottom_bound[1], upper_bound[1] + 1, range_arr[1]):
+    first_run_flag = first_run_flag - 1
+    for iter in range(num_iterations):
+        for x in range(bottom_bound[0], upper_bound[0]+1, range_arr[0]):
+            for theta in range(bottom_bound[2], upper_bound[2] + 1, range_arr[2]):
+                if first_run_flag >= 0:  # if that's the first run spin z motor to the desired position
+                    send_z = z
+                else:  # else spin it only by the needed range
+                    send_z = range_arr[1]
 
-for x in range(bottom_bound[0], upper_bound[0]+1):
-    for z in range(bottom_bound[1], upper_bound[1] + 1):
-        for theta in range(bottom_bound[2], upper_bound[2] + 1):
-            coordinates_dict['z'] = abs(z)
-            coordinates_dict['x'] = abs(x)
-            coordinates_dict['theta'] = abs(theta)
-            coordinates_dict['dirz'] = flip_dir(curr_dir_z)
-            coordinates_dict['dirx'] = flip_dir(curr_dir_x)
-            coordinates_dict['dirtz'] = flip_dir(curr_dir_tz)
+                coordinates_dict['z'] = abs(send_z)
+                coordinates_dict['x'] = abs(x)
+                coordinates_dict['theta'] = abs(theta)
+                coordinates_dict['dirz'] = decide_dir(send_z)
+                coordinates_dict['dirx'] = decide_dir(x)
+                coordinates_dict['dirtz'] = decide_dir(theta)
 
-            json_str = json.dumps(coordinates_dict)+'\n'
-            json_str = json_str.encode('utf-8')
-            ser.write(json_str)
-            print(f"Sent json {coordinates_dict} to arduino")
+                json_str = json.dumps(coordinates_dict)+'\n'
+                json_str = json_str.encode('utf-8')
+                ser.write(json_str)
+                print(f"Sent json {coordinates_dict} to arduino")
 
-            # wait for a message from arduino that he moved to position
-            ack_msg = ser.readline().decode().strip()
-            while ack_msg != "moved":
+                # wait for a message from arduino that he moved to position
                 ack_msg = ser.readline().decode().strip()
-            print(f"ack_msg is {ack_msg}")
-            ack_msg = ""
-            # now we should take a pic
-            capture_pic(x, z, theta, 0, root_dir)
+                while ack_msg != "moved":
+                    ack_msg = ser.readline().decode().strip()
+                print(f"ack_msg is {ack_msg}")
+                ack_msg = ""
+                # now we should take a pic
+                capture_pic(x, z, theta, 0, root_dir)
+                coordinates_dict['z'] = 0
+                # now tell the arduino to turn the other way by flipping dir
+                curr_dir_z = coordinates_dict['dirz']
+                curr_dir_x = coordinates_dict['dirx']
+                curr_dir_tz = coordinates_dict['dirtz']
 
-            # now tell the arduino to turn the other way by flipping dir
-            curr_dir_z = coordinates_dict['dirz']
-            curr_dir_x = coordinates_dict['dirx']
-            curr_dir_tz = coordinates_dict['dirtz']
+                coordinates_dict['dirz'] = flip_dir(curr_dir_z)
+                coordinates_dict['dirx'] = flip_dir(curr_dir_x)
+                coordinates_dict['dirtz'] = flip_dir(curr_dir_tz)
 
-            coordinates_dict['dirz'] = flip_dir(curr_dir_z)
-            coordinates_dict['dirx'] = flip_dir(curr_dir_x)
-            coordinates_dict['dirtz'] = flip_dir(curr_dir_tz)
+                json_str = json.dumps(coordinates_dict) + '\n'
+                json_str = json_str.encode('utf-8')
+                ser.write(json_str)
+                print(f"Sent json {coordinates_dict} flipped to arduino")
 
-            json_str = json.dumps(coordinates_dict) + '\n'
-            json_str = json_str.encode('utf-8')
-            ser.write(json_str)
-            print(f"Sent json {coordinates_dict} flipped to arduino")
-
-            ack_msg = ser.readline().decode().strip()
-            while ack_msg != "moved":
                 ack_msg = ser.readline().decode().strip()
-            print(f"ack_msg after flipping is {ack_msg}")
-            ack_msg = ""
+                while ack_msg != "moved":
+                    ack_msg = ser.readline().decode().strip()
+                print(f"ack_msg after flipping is {ack_msg}")
+                ack_msg = ""
 
-            # now flip back the direction
+                # now flip back the direction
 
 
 
