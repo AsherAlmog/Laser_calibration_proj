@@ -1,4 +1,4 @@
-# import cv2 as cv
+import cv2 as cv
 import matplotlib.pyplot as plt
 import torch
 from torch import nn
@@ -8,11 +8,18 @@ from torch.utils.data import DataLoader
 import os
 from torchvision import transforms
 import torchvision.models as models
-# from torchvision.io import read_image
+import torchvision.io as io
 from PIL import Image
 import glob
+from torch.utils.data._utils.collate import default_collate
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # Check if GPU is available
+def collate_fn(batch):
+    batch = [data for data in batch if data[0] is not None]  # Remove None samples
+    if len(batch) == 0:
+        return None, None
+    return default_collate(batch)
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # Check if GPU is available
 class SpeckleDataset(Dataset):
     def __init__(self, data_dir, transform=None):
         self.data_dir = data_dir
@@ -24,11 +31,13 @@ class SpeckleDataset(Dataset):
 
     def __getitem__(self, idx):
         image_path = self.image_paths[idx]
-        image = Image.open(image_path)
-
-        if self.transform:
-            image = self.transform(image)
-
+        try:
+            image = Image.open(image_path)
+            if self.transform:
+                image = self.transform(image)
+        # image = image[0, :, :]
+        except:
+            return None, None
         label = self._extract_label(image_path)
         return image, label
 
@@ -53,7 +62,7 @@ class SpeckleDataset(Dataset):
         return label
 
 
-data_dir = '/home/baralmog/speckles_pic'
+data_dir = '/home/baralmog/specks'
 
 # Define the data transforms
 transform = transforms.Compose([
@@ -75,22 +84,8 @@ train_size = int(training_percentage * len(laser_dataset))
 test_size = len(laser_dataset) - train_size
 train_dataset, test_dataset = torch.utils.data.random_split(laser_dataset, [train_size, test_size])
 batch_size = 32
-train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
-# plotting an image for example:
-first_image, first_label = next(iter(train_dataloader))
-
-# Convert the image tensor to a NumPy array and transpose the dimensions
-first_image = first_image[0].numpy().transpose(1, 2, 0)
-
-# Display an image if wanted
-plot_first_img_flag = 0
-if plot_first_img_flag:
-    plt.imshow(first_image)
-    plt.title(f"Label: {first_label}")
-    plt.axis('off')
-    plt.show()
+train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,collate_fn=collate_fn)
+test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False,collate_fn=collate_fn)
 
 
 learning_rate = 0.01
@@ -99,23 +94,34 @@ learning_rate = 0.01
 # Define the ResNet50 model with weights from ImageNet
 output_size = 3
 # model = models.resnet50(weights='IMAGENET1K_V1')
-model = models.resnet50(pretrained=True)
+pretrained_flag = 0
+if pretrained_flag:
+    pretrained = True
+    requires_grad = False
+else:
+    pretrained = False
+    requires_grad = True
+
+model = models.resnet50(pretrained=pretrained)
 num_features = model.fc.in_features
 model.fc = nn.Linear(num_features, output_size)  # Set the output layer to have 3 units
 
 # Freeze the pre-trained layers
 for param in model.parameters():
-    param.requires_grad = False
+    param.requires_grad = requires_grad
 
 # Set the output layer to have requires_grad=True
-for param in model.fc.parameters():
-    param.requires_grad = True
+if pretrained_flag:
+    for param in model.fc.parameters():
+        param.requires_grad = True
+
+
 
 
 #model.to(device)  # Move the model to the device
 device_ids = [0,1,2,3]
 model = model.cuda()
-model = nn.DataParallel(model)
+model = nn.DataParallel(model, device_ids=device_ids)
 print(f"working with device: {device}")
 loss_fn = nn.MSELoss()# .to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -129,6 +135,8 @@ def train(train_dataloader, loss_fn, optimizer, device):
     num_batches = len(train_dataloader)
     train_loss = 0
     for batch, (X, y) in enumerate(train_dataloader):
+        if(X==None):
+            continue
         # Compute prediction and loss
         X = X.cuda(non_blocking=True)
         y = y.cuda(non_blocking=True)
@@ -153,6 +161,8 @@ def test(test_dataloader, loss_fn, loss_lst, device):
     test_loss = 0
     with torch.no_grad():
         for X, y in test_dataloader:
+            if (X==None):
+                continue
             X = X.cuda(non_blocking=True)
             y = y.cuda(non_blocking=True)
             y_hat = model(X)
