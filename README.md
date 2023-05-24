@@ -20,4 +20,4 @@ Learning rate: starts at 0.01 and decreases by 70% every 8 epochs <br>
 # Results
 The MSE loss decreases significantly (starts at ~3, ends at ~0.05). <br>
 Test loss is as below: <br>
-![test loss Image](loss_graph.png)
+![test loss Image](./train/loss_graph.png)
