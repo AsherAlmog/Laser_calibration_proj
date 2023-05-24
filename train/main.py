@@ -29,6 +29,7 @@ class SpeckleDataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
+        image = image[0, :, :]
         label = self._extract_label(image_path)
         return image, label
 
@@ -53,7 +54,7 @@ class SpeckleDataset(Dataset):
         return label
 
 
-data_dir = '/home/baralmog/speckles_pic'
+data_dir = 'E:/speckles_pic' # '/home/baralmog/speckles_pic'
 
 # Define the data transforms
 transform = transforms.Compose([
@@ -82,12 +83,12 @@ test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 first_image, first_label = next(iter(train_dataloader))
 
 # Convert the image tensor to a NumPy array and transpose the dimensions
-first_image = first_image[0].numpy().transpose(1, 2, 0)
+first_image = first_image[0].numpy()  # .transpose(1, 2, 0)
 
 # Display an image if wanted
-plot_first_img_flag = 0
+plot_first_img_flag = 1
 if plot_first_img_flag:
-    plt.imshow(first_image)
+    plt.imshow(first_image, cmap='gray')
     plt.title(f"Label: {first_label}")
     plt.axis('off')
     plt.show()
@@ -99,17 +100,26 @@ learning_rate = 0.01
 # Define the ResNet50 model with weights from ImageNet
 output_size = 3
 # model = models.resnet50(weights='IMAGENET1K_V1')
-model = models.resnet50(pretrained=True)
+pretrained_flag = 0
+if pretrained_flag:
+    pretrained = True
+    requires_grad = False
+else:
+    pretrained = False
+    requires_grad = True
+
+model = models.resnet50(pretrained=pretrained)
 num_features = model.fc.in_features
 model.fc = nn.Linear(num_features, output_size)  # Set the output layer to have 3 units
 
 # Freeze the pre-trained layers
 for param in model.parameters():
-    param.requires_grad = False
+    param.requires_grad = requires_grad
 
 # Set the output layer to have requires_grad=True
-for param in model.fc.parameters():
-    param.requires_grad = True
+if pretrained_flag:
+    for param in model.fc.parameters():
+        param.requires_grad = True
 
 
 #model.to(device)  # Move the model to the device
