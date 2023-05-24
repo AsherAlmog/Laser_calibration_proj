@@ -13,6 +13,11 @@ The following schematic shows the process:<br>
 # Deep learning model
 original images: (1280, 960,3) images<br>
 data transforms: turning the images to tensors<br>
-The selected model: a pre-trained resNet-50 , with a modified FC layer<br>
+The selected model: a pre-trained resNet-18 , with a modified FC layer<br>
 Loss function : MSE<br>
 optimizer: Adam<br>
+Learning rate: starts at 0.01 and decreases by 70% every 8 epochs <br>
+# Results
+The MSE loss decreases significantly (starts at ~3, ends at ~0.05). <br>
+Test loss is as below: <br>
+![test loss Image](loss_graph.png)
