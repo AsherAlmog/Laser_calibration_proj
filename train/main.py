@@ -125,7 +125,7 @@ model = nn.DataParallel(model, device_ids=device_ids)
 print(f"working with device: {device}")
 loss_fn = nn.MSELoss()# .to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.4)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=8, gamma=0.3)
 epochs = 30
 loss_lst = []
 
