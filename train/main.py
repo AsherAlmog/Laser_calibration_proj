@@ -83,7 +83,7 @@ training_percentage = 0.8
 train_size = int(training_percentage * len(laser_dataset))
 test_size = len(laser_dataset) - train_size
 train_dataset, test_dataset = torch.utils.data.random_split(laser_dataset, [train_size, test_size])
-batch_size = 32
+batch_size = 16
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,collate_fn=collate_fn)
 test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False,collate_fn=collate_fn)
 
@@ -102,7 +102,7 @@ else:
     pretrained = False
     requires_grad = True
 
-model = models.resnet50(pretrained=pretrained)
+model = models.resnet18(pretrained=pretrained)
 num_features = model.fc.in_features
 model.fc = nn.Linear(num_features, output_size)  # Set the output layer to have 3 units
 
@@ -126,7 +126,7 @@ print(f"working with device: {device}")
 loss_fn = nn.MSELoss()# .to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.4)
-epochs = 60
+epochs = 30
 loss_lst = []
 
 
