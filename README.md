@@ -1,4 +1,13 @@
 # Laser calibration
+This repo contains code scripts to collect data of a laser beam's location using stepper motors that move the laser.<br>
+The steppers are assumed to be controlled by an Arduino controller.<br>
+We included some 3D models that we used to connect stepper motors to optical stages.<br>
+This repo also contains a script for training a deep learning model to estimate the coordinates of the beam.<br>
+# 3D models
+For the ones who wish to build a similar setup by connecting 5mm stepper motors to ThorLabs' manual stages,
+we included some useful 3D models under the folder *3D_models_STL_files*:<br>
+The first is a coupler that connects the motor's shaft to the manual stage, named *coupler_13mm.stl*
+and the second is *stepper_holder_z.stl* that is a stand for the motor.
 # data collection process:
 - **Arduino** - serial_comm_arduino.ino:<br>
 This script is used to recieve a json file with a position to move to,
