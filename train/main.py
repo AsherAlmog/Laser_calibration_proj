@@ -126,7 +126,7 @@ print(f"working with device: {device}")
 loss_fn = nn.MSELoss()# .to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=8, gamma=0.3)
-epochs = 30
+epochs = 1
 loss_lst = []
 
 
@@ -179,7 +179,7 @@ for epoch in range(epochs):
     train(train_dataloader, loss_fn, optimizer, device)
     test(test_dataloader, loss_fn, loss_lst, device)
 
-torch.save(model.state_dict(), 'model_params.pth')
+torch.save(model, 'model_params_0.pth')
 plt.figure()
 plt.plot(loss_lst)
 plt.xlabel('epoch')
